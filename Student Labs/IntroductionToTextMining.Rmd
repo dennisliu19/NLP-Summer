@@ -1,0 +1,142 @@
+---
+title: "Introduction to Working with Text Files"
+author: "Shonda Kuiper"
+date: "May 21, 2017"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Packages Installed: stringi, knitr, ggplot2 
+
+Useful packages not required for this RMD: tm, wordcloud, RWeka, readtext, and [quanteda](https://cran.r-project.org/web/packages/quanteda/vignettes/quickstart.html). 
+
+```{r warning = FALSE, echo = FALSE}
+require(stringi, quietly = TRUE,warn.conflicts = FALSE)
+# install.packages("knitr")
+require(knitr, quietly = TRUE, warn.conflicts = FALSE)
+require(ggplot2, quietly = TRUE, warn.conflicts = FALSE) #for qplots
+```
+
+
+#### Reading Text Data
+The goal of this activity is to start working with text files. The dataset from  [SwiftKey](https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip) contains twitter, news and blog data in four languages. For this activity we'll focus on the English documents. Since these are large files, we suggest downloading onto your local computer and then loading into R.
+
+The `readLines()` function from `base R` can be used to read in the data. Make sure you use the proper path corresponding to your local computer {the getwd() function can be useful here}. 
+
+```{r eval = TRUE, warning=FALSE}
+#read in blogs, twitter and news
+Blogs1 <- readLines("C:/Users/KUIPERS/Desktop/RStudio/datasciencecoursera/NLP/final/en_US/en_US.blogs.txt", encoding = "UTF-8", skipNul = TRUE, warn = FALSE)
+Twitter1 <- readLines("C:/Users/KUIPERS/Desktop/RStudio/datasciencecoursera/NLP/final/en_US/en_US.twitter.txt",encoding = "UTF-8", skipNul = TRUE, warn = FALSE)
+News1 <- readLines("C:/Users/KUIPERS/Desktop/RStudio/datasciencecoursera/NLP/final/en_US/en_US.news.txt", encoding = "UTF-8", skipNul = TRUE, warn = FALSE)
+```
+
+It is always useful to complete a quick check to ensure each file was properly read.
+```{r eval=FALSE}
+#list the number of lines of each document
+length(Blogs1)
+length(Twitter1)
+length(News1)
+```
+
+Alternatively the `readtext` package works particularly well with the `quanteda` package. `Quanteda` is a fast and efficient text analysis package. Currently we need to install this `readtext` package directly from a repository on the github, Eventually we expect the readtext package to again be available at the cran and bioconductor repositories. 
+```{r eval = FALSE}
+#install.packages("devtools")
+require(devtools)
+
+devtools::install_github("kbenoit/readtext") 
+require(readtext)
+require(quanteda)
+```
+
+#### File Size (in scripts but not in RMD files)
+```{r eval = FALSE, echo = FALSE}
+getwd()
+setwd("C:/Users/KUIPERS/Desktop/RStudio/datasciencecoursera/NLP/final/en_US")
+```
+
+Before reading the data into R, you can determine basic information about the file.
+```{r eval = FALSE}
+file.info("en_US.blogs.txt")
+# The size (megabites) for a particular file 
+file.info("en_US.blogs.txt")$size/1024^2   ## [1] 200.4242
+```
+#### File characteristics
+Text files do not naturally fit into data frames, instead each row represents a line of text. The length of each line can vary dramatically.
+
+```{r}
+# To view the first 3 lines
+head(Twitter1, 3)
+# The number of lines
+length(Twitter1)            # 2360148
+# The length of the longest line
+max(nchar(Twitter1))        # 140
+# 5 number summary of line characters
+summary(nchar(Twitter1))
+```
+
+The `stringi` package provides several convenient string/text manipulation functions. This includes summary statistics, searching for patterns, replace, split, etc... The `knitr` package provides a `kable` function that allows us to quickly create a summary table
+
+```{r}
+# using the stringi package to calculate summary data (number of lines and chars)
+Bl1 <- stri_stats_general(Blogs1) 
+Tw1 <- stri_stats_general(Twitter1)
+Ne1 <- stri_stats_general(News1)
+data1 <- data.frame(cbind(Bl1, Tw1, Ne1))
+
+#using the knitr package to make a summary table
+kable(data1, caption = "Summary Table of the Blogs, Twitter, and News documents")
+```
+
+
+```{r}
+# Alternative Summary Table
+Lines1 <- c(length(Blogs1), length(Twitter1), length(News1))
+Words1 <- c(sum(stri_count_words(Blogs1)),sum(stri_count_words(Twitter1)),sum(stri_count_words(News1)))
+Chars1 <- c(sum(nchar(Blogs1)),sum(nchar(Twitter1)),sum(nchar(News1)))
+MaxWords1 <- c(max(stri_count_words(Blogs1)),max(stri_count_words(Twitter1)),max(stri_count_words(News1)))
+datasum2 <- data.frame(Lines1, Words1, Chars1, MaxWords1)
+names(datasum2) <- c("# Lines", "# of Words", "# of Characters","Max Words/Line")
+row.names(datasum2) <- c("Blogs", "Twitter", "News")
+datasum2
+```
+
+```{r}
+#This stringi function counts the number of words on each line in the Twitter document. 
+Tw2 = stri_count_words(Twitter1) 
+summary(Tw2)
+qplot(Tw2, binwidth = 5, main = "Number of words in each line in the Twitter document")
+```
+
+
+
+
+
+#### To read a particular line that contains a word or phrase of interest (e.g. biostats)
+In `Base R` the `grep()` returns an indices vector (gives the exact line where the word or phrase is found) and `grepl()` returns a logical vector (a vector of TRUE or FALSE for each line of text).
+```{r}
+# Search for a particular word or phrase in a document
+love <- sum(grepl("love", Twitter1))
+love
+# R is case sensitive, to include capitol letters we list both options [], see the "Regular Expressions" document for more options.
+love <- sum(grepl("[Ll][Oo][Vv][Ee]", Twitter1))
+love
+
+# To find the line of text that contains the word biostats
+biostats <- grep("biostats", Twitter1)
+biostats  ### [1] 556,872
+# To print the line that contains the word biostats
+Twitter1[biostats]
+
+phrase1 <- grep("A computer once beat me at chess, but it was no match for me at", Twitter1)
+phrase1
+#Print the first four lines that contain phrase1
+head(Twitter1[phrase1],4)
+```
+
+#### ??? How do you read the shortest line? How do you sort by number of characters?
+
+
